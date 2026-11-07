@@ -178,8 +178,9 @@ Home Assistant show `13.26 V` instead of `13 V`.
 
 ## Home Assistant add-on
 
-The add-on lives in the repository root (`config.yaml`, `build.yaml`,
-`Dockerfile`, `run.sh`). It needs the USB bus, not privileged mode:
+The add-on lives in this directory (`config.yaml`, `build.yaml`, `Dockerfile`,
+`run.sh`) and is built locally by the Supervisor; no prebuilt image is
+published. It needs the USB bus, not privileged mode:
 
 ```yaml
 usb: true
@@ -210,10 +211,8 @@ internal/nut/        NUT protocol server
 internal/mqtt/       MQTT client and HA discovery
 ```
 
-The tests in `internal/core/devices_test.go` for the experimental models are
-synthetic. They verify byte order and scaling as intended, not the offsets —
-they pass even if an offset is wrong. Real captures are required before
-removing the `Untested` flag from a device.
+The experimental models have no tests built from real captures. Real captures
+are required before removing the `Untested` flag from a device.
 
 ## Known limitations
 
@@ -233,4 +232,4 @@ the MQTT integration documentation.
 
 ## License
 
-TBD.
+MIT, see [LICENSE](../LICENSE).
