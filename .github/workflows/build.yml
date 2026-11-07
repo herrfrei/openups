@@ -36,6 +36,21 @@ jobs:
           fi
       - run: go vet ./...
       - run: go test ./...
+      - name: version is injected from config.yaml
+        run: |
+          v="$(awk '/^version:/{print $2; exit}' config.yaml | tr -d '"')"
+          if [ -z "$v" ]; then
+            echo "::error::no top-level version: in openupsd/config.yaml"
+            exit 1
+          fi
+          echo "config.yaml version: $v"
+          CGO_ENABLED=0 go build -trimpath \
+            -ldflags "-s -w -X github.com/herrfrei/openupsd/internal/core.DriverVersion=$v" \
+            -o "$RUNNER_TEMP/openupsd" ./cmd/openupsd
+          if ! strings "$RUNNER_TEMP/openupsd" | grep -qx "$v"; then
+            echo "::error::version $v not embedded - check the -X import path"
+            exit 1
+          fi
 
   # Smoke test only: proves the add-on Dockerfile still builds the way the
   # Supervisor builds it. Nothing is pushed anywhere.
