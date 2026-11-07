@@ -1,9 +1,9 @@
 # OpenUPSd: Mini-Box UPS for Home Assistant
 
-[![CI](https://github.com/herrfrei/openupsd/actions/workflows/build.yml/badge.svg)](https://github.com/herrfrei/openupsd/actions/workflows/build.yml)
+[![CI](https://github.com/herrfrei/openups/actions/workflows/build.yml/badge.svg)](https://github.com/herrfrei/openups/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[![Add this repository to your Home Assistant instance.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fherrfrei%2Fopenupsd)
+[![Add this repository to your Home Assistant instance.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fherrfrei%2Fopenups)
 
 OpenUPSd reads a Mini-Box USB UPS directly over USB and makes it available to
 Home Assistant in two ways at once:
@@ -35,7 +35,7 @@ contribution you can make.
 
 1. Click the button above, or in Home Assistant go to **Settings → Add-ons →
    Add-on Store → ⋮ → Repositories** and add
-   `https://github.com/herrfrei/openupsd`.
+   `https://github.com/herrfrei/openups`.
 2. Install **OpenUPSd**. The add-on is compiled on your Home Assistant machine,
    so the first install downloads a Go toolchain image and can take a few
    minutes, especially on a Raspberry Pi.
