@@ -34,7 +34,7 @@ type DeviceID struct {
 	Vendor  uint16
 	Product uint16
 	MaxIn   int    // report size: 32 (OpenUPS/OpenUPS2), 24 (DCDC-USB)
-	Path    string // optional: explicit node such as /dev/hidraw0 (skips enumeration)
+	Path    string // optional: explicit usbfs node such as /dev/bus/usb/003/009 (skips enumeration)
 }
 
 type Dev interface {

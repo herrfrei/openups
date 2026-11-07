@@ -17,7 +17,6 @@ func main() {
 	size := flag.Int("size", 32, "report size; taken from the device table when the pid is known (24 for dcdcusb)")
 	idx := flag.Int("n", 0, "device index")
 	path := flag.String("dev", "", "explicit usbfs node, e.g. /dev/bus/usb/003/009")
-	mode := flag.String("mode", "usbfs", "transport: usbfs (like pyusb) or hidraw")
 	decode := flag.Bool("decode", false, "run the model decoder and print the resulting values instead of raw reports")
 	flag.Parse()
 
@@ -27,13 +26,7 @@ func main() {
 		id.MaxIn = dev.Size
 	}
 
-	var d usb.Dev
-	var err error
-	if *mode == "hidraw" {
-		d, err = usb.OpenHID(context.Background(), id, *idx)
-	} else {
-		d, err = usb.OpenUSB(context.Background(), id, *idx)
-	}
+	d, err := usb.OpenUSB(context.Background(), id, *idx)
 	if err != nil {
 		log.Fatal(err)
 	}
