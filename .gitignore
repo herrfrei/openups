@@ -1,0 +1,35 @@
+# Binaries
+/openupsd/openupsd
+/openupsd/openupsd-*
+/openupsd/hidprobe
+/openupsd/hidprobe-*
+*.exe
+*.test
+*.out
+
+# Go workspaces and local tooling
+go.work
+go.work.sum
+.idea/
+.vscode/
+*.swp
+*~
+
+# Test and profiling artifacts
+coverage.out
+coverage.html
+*.prof
+*.trace
+
+# Local runtime configuration
+/data/
+options.json
+*.local.json
+.env
+.env.*
+
+/build/
+
+# OS noise
+.DS_Store
+Thumbs.db

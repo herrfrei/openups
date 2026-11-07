@@ -1,0 +1,8 @@
+.git
+.github
+*.md
+openupsd
+openupsd-*
+hidprobe
+hidprobe-*
+coverage.out

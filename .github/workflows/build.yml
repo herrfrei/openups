@@ -1,0 +1,57 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+    paths-ignore: ["**.md"]
+  pull_request:
+    paths-ignore: ["**.md"]
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: openupsd
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: openupsd/go.mod
+          cache-dependency-path: openupsd/go.sum
+      - name: gofmt
+        run: |
+          out="$(gofmt -l .)"
+          if [ -n "$out" ]; then
+            printf '::error::gofmt needed:\n%s\n' "$out"
+            exit 1
+          fi
+      - run: go vet ./...
+      - run: go test ./...
+
+  # Smoke test only: proves the add-on Dockerfile still builds the way the
+  # Supervisor builds it. Nothing is pushed anywhere.
+  docker:
+    needs: test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: docker/setup-buildx-action@v3
+      - uses: docker/build-push-action@v6
+        with:
+          context: ./openupsd
+          file: ./openupsd/Dockerfile
+          platforms: linux/amd64
+          push: false
+          build-args: |
+            BUILD_FROM=ghcr.io/home-assistant/amd64-base:3.20
+            BUILD_ARCH=amd64
+            BUILD_VERSION=ci

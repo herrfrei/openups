@@ -1,0 +1,45 @@
+name: OpenUPSd
+version: "0.3.1"
+slug: openupsd
+description: Mini-Box OpenUPS to MQTT (Home Assistant discovery) and NUT server
+url: https://github.com/herrfrei/openupsd
+arch:
+  - amd64
+  - aarch64
+  - armv7
+startup: services
+boot: auto
+init: false
+usb: true
+ports:
+  3493/tcp: 3493
+ports_description:
+  3493/tcp: NUT server
+options:
+  model: auto
+  ups_name: ""
+  mqtt_host: core-mosquitto
+  mqtt_port: 1883
+  mqtt_username: ""
+  mqtt_password: ""
+  mqtt_prefix: homeassistant
+  node_id: openups
+  nut_listen: ":3493"
+  interval: 5
+  discovery: true
+  device_path: ""
+  device_index: 0
+schema:
+  model: list(openups|openups2|nucups|dcdcusb|auto)
+  ups_name: str?
+  mqtt_host: str
+  mqtt_port: port
+  mqtt_username: str?
+  mqtt_password: password?
+  mqtt_prefix: str
+  node_id: str
+  nut_listen: str
+  interval: int(1,3600)
+  discovery: bool
+  device_path: str?
+  device_index: int(0,)
