@@ -11,7 +11,7 @@ import (
 // The OpenUPS keeps its settings in 1 KiB of flash that the host reads in
 // 16 byte pages with the same HID reports as the status data.
 //
-// This package only reads the flash. 
+// This package only reads the flash.
 const (
 	FlashStart = 0x7800
 	FlashSize  = 0x400
