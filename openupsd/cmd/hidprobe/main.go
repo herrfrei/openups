@@ -18,6 +18,8 @@ func main() {
 	idx := flag.Int("n", 0, "device index")
 	path := flag.String("dev", "", "explicit usbfs node, e.g. /dev/bus/usb/003/009")
 	decode := flag.Bool("decode", false, "run the model decoder and print the resulting values instead of raw reports")
+	var fo flashOpts
+	fo.register()
 	flag.Parse()
 
 	id := usb.DeviceID{Vendor: 0x04D8, Product: uint16(*pid), MaxIn: *size, Path: *path}
@@ -36,6 +38,13 @@ func main() {
 		fmt.Printf("product %04x is not in the device table, using a generic probe\n", uint16(*pid))
 	}
 	fmt.Printf("serial: %q\n", d.Serial())
+
+	if fo.active() {
+		if err := runFlash(d, dev, &fo); err != nil {
+			log.Fatal(err)
+		}
+		return
+	}
 
 	if *decode {
 		if !known {

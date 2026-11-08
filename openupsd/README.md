@@ -161,9 +161,16 @@ Reported variables: `device.mfr`, `device.model`, `device.type`, `driver.name`,
 `output.voltage`, `battery.voltage`, `battery.current`, plus `device.serial`
 and `ups.serial` when the device exposes a serial.
 
-`battery.charge` and `battery.runtime` are deliberately absent on the OpenUPS:
-the firmware only reports them in the `CLOCK_OUT` reply, which breaks
-communication on that model. A guessed SOC would be worse than no value.
+`battery.charge` and `battery.runtime` are **estimates** on the OpenUPS (the
+firmware only reports them in the `CLOCK_OUT` reply, which breaks communication
+on that model). They are derived in `internal/core/battery.go` from the battery
+description in the device flash (`CAPACITY`, `CELLS`, the OCV curve, cutoff and
+charge-end voltages) and the measured currents, by coulomb counting that is
+anchored at end of charge, at the cutoff voltage, and at rest in the steep low
+end of the curve. They are only added when the flash settings are readable and
+plausible (`-estimate=false` or the add-on option `battery_estimate: false`
+turns them off). The count is kept in `battery-state.json` next to the options
+file and restored if it is less than an hour old.
 
 ## MQTT
 
@@ -217,12 +224,13 @@ are required before removing the `Untested` flag from a device.
 ## Known limitations
 
 - Read-only NUT server: no `SET VAR`, no `INSTCMD`.
-- No `LB` (low battery) status; thresholds live in device flash.
-- OpenUPS always reports six cells, even in a 4-cell configuration. Reading
-  `CELLS` from flash would fix this and also unlock `battery.charge`.
+- No `LB` (low battery) status: the estimate is deliberately not allowed to make
+  NUT clients shut down.
+- The estimates have not been checked against a real discharge yet.
+- Six cell-voltage sensors are always created, even if `CELLS` says fewer.
 - DCDC-USB is not a UPS in dumb/script mode; `ups.status` is only `OL` or
   `OFF`.
-- No write path to device flash. Nothing in this daemon modifies the device.
+- The daemon only reads device flash. `hidprobe -config` dumps the settings.
 
 ## Acknowledgments
 

@@ -9,6 +9,7 @@ import (
 	"log"
 	"os"
 	"os/signal"
+	"path/filepath"
 	"strings"
 	"syscall"
 	"time"
@@ -42,6 +43,8 @@ type addonOptions struct {
 	Discovery    *bool  `json:"discovery"`
 	DevicePath   string `json:"device_path"`
 	DeviceIndex  int    `json:"device_index"`
+	// BatteryEstimate switches the charge/runtime estimate (OpenUPS only).
+	BatteryEstimate *bool `json:"battery_estimate"`
 }
 
 func defaultOptions() addonOptions {
@@ -58,6 +61,10 @@ func defaultOptions() addonOptions {
 
 func (o addonOptions) discoveryEnabled() bool {
 	return o.Discovery == nil || *o.Discovery
+}
+
+func (o addonOptions) estimateEnabled() bool {
+	return o.BatteryEstimate == nil || *o.BatteryEstimate
 }
 
 func loadOptions(path string) (addonOptions, error) {
@@ -168,6 +175,9 @@ func main() {
 	interval := flag.Duration("interval", time.Duration(opts.Interval)*time.Second, "poll interval")
 	devPath := flag.String("dev", opts.DevicePath, "explicit usbfs node, e.g. /dev/bus/usb/003/009")
 	idx := flag.Int("n", opts.DeviceIndex, "device index")
+	estimateOn := flag.Bool("estimate", opts.estimateEnabled(), "estimate battery charge and runtime (OpenUPS only)")
+	stateFile := flag.String("state-file", filepath.Join(filepath.Dir(optPath), "battery-state.json"),
+		"file that keeps the charge estimate across restarts (empty: none)")
 	flag.Parse()
 
 	if *modelName != "auto" {
@@ -206,7 +216,16 @@ func main() {
 		log.Printf("usb: %s opened", model.Model)
 		warnUntested(model)
 	}
+	var est *core.Estimator
+	if model != nil {
+		model, est = withEstimator(model, dev, *estimateOn, *stateFile)
+	}
 	defer func() {
+		if est != nil {
+			if err := est.Save(time.Now()); err != nil {
+				log.Printf("battery: cannot save state: %v", err)
+			}
+		}
 		if dev != nil {
 			dev.Close()
 		}
@@ -262,6 +281,7 @@ func main() {
 	}
 
 	failures := 0
+	saveWarned := false
 	tick := time.NewTicker(*interval)
 	defer tick.Stop()
 	for {
@@ -270,8 +290,12 @@ func main() {
 				log.Printf("usb: %v", err)
 			} else {
 				time.Sleep(openDelay)
+				if est != nil { // keep the newest count across the reconnect
+					_ = est.Save(time.Now())
+				}
 				model, dev, failures = m, d, 0
 				log.Printf("usb: %s opened", model.Model)
+				model, est = withEstimator(model, dev, *estimateOn, *stateFile)
 				warnUntested(model)
 				if *name == "" && upsName != model.Model {
 					log.Printf("nut: still serving as %q (rename with -name and restart)", upsName)
@@ -291,6 +315,14 @@ func main() {
 			} else {
 				failures = 0
 				serial := dev.Serial()
+				if est != nil {
+					now := time.Now()
+					est.Apply(&r, now)
+					if err := est.SaveIfDue(now); err != nil && !saveWarned {
+						saveWarned = true
+						log.Printf("battery: cannot save state (estimate will restart from voltage after a restart): %v", err)
+					}
+				}
 				store.Update(model.NUTVars(r, serial))
 				if bridge != nil {
 					bridge.Publish(model, r, serial)
@@ -303,6 +335,29 @@ func main() {
 		case <-tick.C:
 		}
 	}
+}
+
+// withEstimator reads the battery description from the OpenUPS flash and, if
+// it looks sane, returns the device extended with the charge and runtime
+// sensors together with the estimator. On any problem it logs the reason and
+// returns the device unchanged, so the daemon keeps working without estimates.
+func withEstimator(model *core.Device, dev usb.Dev, enabled bool, statePath string) (*core.Device, *core.Estimator) {
+	if !enabled || model.PID != core.OpenUPS.PID {
+		return model, nil
+	}
+	img, err := core.ReadFlash(dev)
+	if err != nil {
+		log.Printf("battery: settings unreadable, no charge/runtime estimate: %v", err)
+		return model, nil
+	}
+	p, err := core.ProfileFromFlash(img)
+	if err != nil {
+		log.Printf("battery: settings not usable, no charge/runtime estimate: %v", err)
+		return model, nil
+	}
+	log.Printf("battery: %d cells, %.1f Ah, %.2f..%.2f V per cell open circuit; estimating charge and runtime",
+		p.Cells, p.CapacityAh, p.OCV[0].Volts, p.OCV[len(p.OCV)-1].Volts)
+	return model.WithSensors(core.EstimateSensors()...), core.NewEstimator(p, statePath, time.Now())
 }
 
 func connectWithRetry(ctx context.Context, b *mqtt.Bridge, every time.Duration) {

@@ -1,9 +1,9 @@
 # OpenUPSd: Mini-Box UPS for Home Assistant
 
-[![CI](https://github.com/herrfrei/openups/actions/workflows/build.yml/badge.svg)](https://github.com/herrfrei/openups/actions/workflows/build.yml)
+[![CI](https://github.com/herrfrei/openupsd/actions/workflows/build.yml/badge.svg)](https://github.com/herrfrei/openupsd/actions/workflows/build.yml)
 [![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 
-[![Add this repository to your Home Assistant instance.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fherrfrei%2Fopenups)
+[![Add this repository to your Home Assistant instance.](https://my.home-assistant.io/badges/supervisor_add_addon_repository.svg)](https://my.home-assistant.io/redirect/supervisor_add_addon_repository/?repository_url=https%3A%2F%2Fgithub.com%2Fherrfrei%2Fopenupsd)
 
 OpenUPSd reads a Mini-Box USB UPS directly over USB and makes it available to
 Home Assistant in two ways at once:
@@ -35,7 +35,7 @@ contribution you can make.
 
 1. Click the button above, or in Home Assistant go to **Settings → Add-ons →
    Add-on Store → ⋮ → Repositories** and add
-   `https://github.com/herrfrei/openups`.
+   `https://github.com/herrfrei/openupsd`.
 2. Install **OpenUPSd**. The add-on is compiled on your Home Assistant machine,
    so the first install downloads a Go toolchain image and can take a few
    minutes, especially on a Raspberry Pi.
@@ -60,6 +60,7 @@ contribution you can make.
 | `discovery` | `true` | publish Home Assistant discovery messages |
 | `device_path` | empty | explicit `/dev/bus/usb/BBB/DDD` node; prefer auto-detection |
 | `device_index` | `0` | which device to use if several match |
+| `battery_estimate` | `true` | estimate battery charge and runtime (OpenUPS only) |
 
 `node_id` becomes part of every entity's `unique_id`. Changing it later creates
 new entities and orphans the old ones.
@@ -91,17 +92,19 @@ variable list and the MQTT topic layout are documented in
 
 ```bash
 hidprobe -pid 0xd004 -decode   # decoded values
+hidprobe -config               # OpenUPS: read-only dump of the settings flash
 hidprobe -pid 0xd004           # raw TX/RX frames, for new models
 ```
 
 ## Limitations
 
 - The NUT server is read-only; there is no `SET VAR` or `INSTCMD`.
-- `battery.charge`, `battery.runtime` and the low-battery (`LB`) status are not
-  reported yet. The OpenUPS only provides them in a reply that breaks
-  communication, and a guessed value would be worse than none.
-- The OpenUPS always reports six cells, even in a 4-cell configuration.
-- Nothing in this project writes to the device's flash.
+- `battery.charge` and `battery.runtime` are **estimates** derived from the battery
+  description in the UPS flash and the measured currents, not values reported by the
+  device. See the add-on documentation for how they work and where they can be wrong.
+- There is no low-battery (`LB`) status.
+- Six cell-voltage entities are always created, even if the UPS is configured for fewer cells.
+- The daemon only reads the UPS settings.
 - Linux only: the USB transport uses usbfs.
 
 ## Repository layout

@@ -1,5 +1,5 @@
 name: OpenUPSd
-version: "0.3.1"
+version: "0.4.0"
 slug: openupsd
 description: Mini-Box OpenUPS to MQTT (Home Assistant discovery) and NUT server
 url: https://github.com/herrfrei/openupsd
@@ -29,6 +29,7 @@ options:
   discovery: true
   device_path: ""
   device_index: 0
+  battery_estimate: true
 schema:
   model: list(openups|openups2|nucups|dcdcusb|auto)
   ups_name: str?
@@ -43,3 +44,4 @@ schema:
   discovery: bool
   device_path: str?
   device_index: int(0,)
+  battery_estimate: bool

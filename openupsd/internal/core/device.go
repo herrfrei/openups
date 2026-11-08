@@ -7,13 +7,7 @@ import (
 	"github.com/herrfrei/openupsd/internal/usb"
 )
 
-// DriverVersion is reported to NUT clients as driver.version. Release builds
-// overwrite it with -ldflags -X, taking the value from openupsd/config.yaml,
-// which stays the single place a version number is maintained. "dev" is what a
-// plain `go build`, `go test` or `go run` reports.
-//
-// It must stay a var: the linker cannot rewrite a const.
-var DriverVersion = "dev"
+const DriverVersion = "0.4.0"
 
 // Sensor is one MQTT entity. NUT is the NUT variable name, "" = MQTT only.
 type Sensor struct {

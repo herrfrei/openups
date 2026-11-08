@@ -50,6 +50,7 @@ gives plausible but wrong numbers. Selecting one logs a warning at startup.
 | `discovery` | `true` | Publish Home Assistant discovery messages. |
 | `device_path` | empty | Explicit device node such as `/dev/bus/usb/003/009`. |
 | `device_index` | `0` | Which device to use when several match. |
+| `battery_estimate` | `true` | Estimate battery charge and runtime (OpenUPS only). |
 
 **`node_id`:** Home Assistant entity unique IDs are built from it. Changing it
 later creates new entities and leaves the old ones orphaned, so pick it once.
@@ -69,17 +70,49 @@ For the OpenUPS the add-on creates these sensors:
 | Input Current | A | The load drawn from the input while on mains |
 | Charge Current | A | Battery charge current |
 | Discharge Current | A | Battery discharge current |
+| Cell 1 to 6 Voltage | V | Per-cell voltage |
 | Temperature | °C | |
 | Output Power | W | |
 | Power State | | `battery`, `charging` or `idle` |
 | Firmware | | Diagnostic entity |
+| Battery Charge | % | **Estimate**, see below |
+| Runtime Estimate | s | **Estimate**: how long the battery would last at the current load |
+| Charge Estimate | | Diagnostic: `tracking` or `initial, from voltage` |
 
 Value entities become `unknown` within a minute if the add-on stops, so a dead
 add-on is visible in Home Assistant instead of showing stale numbers.
 
-There is deliberately **no battery percentage and no runtime estimate** for the
-OpenUPS. The firmware only reports them in a reply that breaks communication
-with the device, and a guessed value would be worse than none.
+## Battery charge and runtime (estimates)
+
+The OpenUPS does not report a charge percentage or a runtime, so the add-on
+works them out. At start-up it reads the battery description stored in the UPS
+(capacity, cell count, cutoff voltage and the voltage-to-charge curve) and then:
+
+* **counts charge** in and out from the measured battery currents;
+* **corrects the count** only when the voltage can be trusted: at the end of a
+  full charge (100 %), when the cells reach the cutoff voltage on battery (0 %),
+  and when the battery rests at a low charge, where the voltage curve is steep;
+* **estimates the runtime** as remaining capacity divided by the discharge
+  current when on battery, or by the load power (with an efficiency learned
+  during outages, 90 % until then) when on mains.
+
+This is an estimate and it can be wrong, mainly in these situations:
+
+* A LiFePO4 battery has an almost flat voltage curve between about 25 % and
+  75 %. Right after the first start the charge comes from the voltage alone
+  (`Charge Estimate` shows `initial, from voltage`) and can be off by a lot.
+  It becomes reliable after the battery has been fully charged once while the
+  add-on was running, which turns the state to `tracking`.
+* The count is saved in `/data` once a minute, and restored after a restart if it
+  is less than an hour old. After a longer pause it starts from the voltage again.
+* The runtime assumes the current load stays the same. It is capped at 48 hours
+  and not shown at all when the load is below about 1 W.
+* Nothing here is a low-battery alarm. The NUT status never reports `LB`, so
+  clients will not shut down because of this estimate.
+
+Set `battery_estimate` to `false` to turn it all off. The add-on also runs
+without estimates if the UPS settings cannot be read or look implausible; the
+log says why.
 
 ## Using the NUT integration
 
@@ -96,6 +129,8 @@ From a shell on another machine you can check it with:
 ```bash
 upsc openups@<home-assistant-host>:3493
 ```
+
+The NUT variables `battery.charge` and `battery.runtime` carry the same estimates.
 
 `SET VAR`, `INSTCMD` and `FSD` are not supported, so the UPS cannot be
 configured or shut down through NUT. `ups.status` shows `OL` on mains, `OL CHRG`
